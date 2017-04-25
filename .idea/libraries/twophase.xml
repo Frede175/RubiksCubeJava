@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="twophase">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/src/lib/twophase.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/src/lib/twophase.jar!/doc" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/src/lib/twophase.jar!/" />
+    </SOURCES>
+  </library>
+</component>
