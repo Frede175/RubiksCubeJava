@@ -40,21 +40,21 @@ public class GUI extends JFrame implements Runnable {
 	
 	
 	private static Scalar targetColorsBGR[] = {
-		new Scalar(255,255,255),
-		new Scalar(0,0,255),
-		new Scalar(0, 128, 255),
-		new Scalar(0, 255, 255),
-		new Scalar(255, 0, 0), 
-		new Scalar(0, 255, 255)
+		new Scalar(255,255,255), //White
+		new Scalar(0,0,255), //Red
+		new Scalar(0, 128, 255), //Orange
+		new Scalar(0, 255, 0), //Green
+		new Scalar(255, 0, 0), //Blue
+		new Scalar(0, 255, 255) //Yellow
 	};
 	
 	private static Scalar targetColors[] = {
-		new Scalar(180, 0, 255),
-		new Scalar(0, 255, 255),
-		new Scalar(15, 255, 255),
-		new Scalar(50, 255, 255),
-		new Scalar(120, 255, 255),
-		new Scalar(30, 255, 255)
+		new Scalar(180, 0, 255), //White
+		new Scalar(180, 255, 255), //Red
+		new Scalar(15, 255, 255), //Orange
+		new Scalar(75, 255, 255), //Green
+		new Scalar(120, 255, 255), //Blue
+		new Scalar(30, 255, 255) //Yellow
 	};
 	
 	
@@ -70,7 +70,7 @@ public class GUI extends JFrame implements Runnable {
 	
 	
 	private JLabel camera;
-	Mat camFrame;
+	Mat camFrame = new Mat();
 	private VideoCapture cam;
 	private boolean usesCamera = false;
 	private int camWidth = 1280, camHeight = 1024;
@@ -88,15 +88,12 @@ public class GUI extends JFrame implements Runnable {
 		
 		if (cam.isOpened()) {
 			usesCamera = true;
-			int w = (int)cam.get(Videoio.CV_CAP_PROP_FRAME_WIDTH);
-			if (w != camWidth) {
 				//Need to calculate
-				int h = (int)cam.get(Videoio.CV_CAP_PROP_FRAME_HEIGHT);
-				int ratio = w/h;
-				cam.set(Videoio.CV_CAP_PROP_FRAME_WIDTH,camWidth);
-				camHeight = camWidth * ratio;
-				cam.set(Videoio.CAP_PROP_FRAME_HEIGHT, camHeight);
-			}
+
+			cam.set(Videoio.CV_CAP_PROP_FRAME_WIDTH,1280);
+			cam.set(Videoio.CAP_PROP_FRAME_HEIGHT, 720);
+			camWidth = (int)cam.get(Videoio.CV_CAP_PROP_FRAME_WIDTH);
+			camHeight = (int)cam.get(Videoio.CV_CAP_PROP_FRAME_HEIGHT);
 		}
 		
 		camera = new JLabel();
@@ -134,7 +131,6 @@ public class GUI extends JFrame implements Runnable {
 			long now = System.currentTimeMillis();
 			if (now - lastDraw >= 1000/30) {
 				lastDraw = now;
-				System.out.println("Draw");
 				//Draw
 				if (usesCamera) {
 					if (cam.read(camFrame)) {
@@ -208,8 +204,8 @@ public class GUI extends JFrame implements Runnable {
 
 				//imshow(colorStrings[i], imgThreshold);
 				Rect rect = getRectFromCenter(getCenter(x, y));
-				Scalar avghsv = Core.mean(imgHSV.submat(rect));
-				Scalar avgbgr = Core.mean(image.submat(rect));
+				Scalar avghsv = Core.mean(new Mat(imgHSV, rect));
+				Scalar avgbgr = Core.mean(new Mat(image, rect));
 				arr[index] = getColor(avghsv, avgbgr);
 
 				//if (x == 0 && y == 0) std::cout << "H: " << avghsv.val[0] << "S: " << avghsv.val[1] << "V: " << avghsv.val[2] << "\n";
@@ -265,9 +261,9 @@ public class GUI extends JFrame implements Runnable {
 
 
 		for (int i = 0; i < 6; i++) {
-			int d = (int)((hsv.val[0] - targetColors[i].val[0])*(hsv.val[0] - targetColors[i].val[0])) +
-					(int)((hsv.val[1] - targetColors[i].val[1])*(hsv.val[1] - targetColors[i].val[1])) +
-					(int)((hsv.val[2] - targetColors[i].val[2])*(hsv.val[2] - targetColors[i].val[2]));
+			int d = (int) ((hsv.val[0] - targetColors[i].val[0]) * (hsv.val[0] - targetColors[i].val[0])) +
+					(int) ((hsv.val[1] - targetColors[i].val[1]) * (hsv.val[1] - targetColors[i].val[1])) +
+					(int) ((hsv.val[2] - targetColors[i].val[2]) * (hsv.val[2] - targetColors[i].val[2]));
 
 
 			if (d < min_d || index == 255) {
@@ -275,8 +271,6 @@ public class GUI extends JFrame implements Runnable {
 				min_d = d;
 			}
 		}
-
-		System.out.println("Color index: " + index);
 
 		return index;
 	}
