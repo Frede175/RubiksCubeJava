@@ -14,7 +14,9 @@ public class Solver {
 	private Solver() {
 
 	}
-	
+
+
+
 	public enum Colors {
 		 WHITE,
 		 RED,
@@ -46,6 +48,20 @@ public class Solver {
 		String cubeString = convertToCubeString(cubeSides);
 		if (cubeString.equals("")) return "";
 		return Search.solution(cubeString, 22, 2, false);
+	}
+
+	public static void SolveCubeAsync(CubeSide[] previewCubeSides, GUI gui) {
+		new Thread() {
+			public void run() {
+				String solution = SolveCube(previewCubeSides);
+				gui.searchComplete();
+				System.out.println("Solution: " + solution);
+				if (!solution.equals("")) gui.setSolution(solution);
+			}
+		}.start();
+
+
+
 	}
 	
 	public static String convertToCubeString(CubeSide cubeSides[]) {

@@ -12,6 +12,8 @@ import org.opencv.videoio.Videoio;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 
@@ -47,7 +49,7 @@ public class GUI extends JFrame implements Runnable {
 		new Scalar(0, 255, 255) //Yellow
 	};
 	
-	private static Scalar targetColors[] = {
+	private Scalar targetColors[] = {
 		new Scalar(180, 0, 255), //White
 		new Scalar(180, 255, 255), //Red
 		new Scalar(15, 255, 255), //Orange
@@ -55,13 +57,13 @@ public class GUI extends JFrame implements Runnable {
 		new Scalar(145, 255, 255), //Blue
 		new Scalar(30, 255, 255) //Yellow
 	};
-	
+
+	private static int NUMBER_OF_FRAMES_TO_SCAN = 30*2;
 	
 	
 	
 	public GUI(Arduino arduino) {
 		this.arduino = arduino;
-		
 		setupFrame();
 		
 	}
@@ -69,13 +71,28 @@ public class GUI extends JFrame implements Runnable {
 	private boolean scanning = false;
 	private int scanningIndex = 0;
 	private int sideIndex = 0;
-	private CubeSide[][] scanCubes = new CubeSide[6][30*5]; //Scan for 5 sec
-	
+	private CubeSide[][] scanCubes = new CubeSide[6][NUMBER_OF_FRAMES_TO_SCAN];
+
+	private String solution;
+	private boolean hasSolution = false;
+	private boolean searching = false;
 	
 	private JButton startScan;
 	private JButton nextSide;
 	private JButton stopScan;
-	
+
+	private JTextField test;
+
+	private JLabel previewSides;
+	private CubeSide[] previewCubeSides = {
+			new CubeSide(new int[] {4,4,4,4,4,4,4,4,4}), //U: Blue
+			new CubeSide(new int[] {0,0,0,0,0,0,0,0,0}), //F: White
+			new CubeSide(new int[] {3,3,3,3,3,3,3,3,3}), //D: Green
+			new CubeSide(new int[] {2,2,2,2,2,2,2,2,2}), //L: Orange
+			new CubeSide(new int[] {5,5,5,5,5,5,5,5,5}), //B: Yellow
+			new CubeSide(new int[] {1,1,1,1,1,1,1,1,1})  //R: Red
+	};
+
 	
 	private JLabel camera;
 	Mat camFrame = new Mat();
@@ -105,7 +122,7 @@ public class GUI extends JFrame implements Runnable {
 		}
 		
 		camera = new JLabel();
-		camera.setSize(new Dimension(1280,1024));
+		camera.setSize(new Dimension(1280,720));
 		
 		if (usesCamera) {
 			cam.read(camFrame);
@@ -125,7 +142,16 @@ public class GUI extends JFrame implements Runnable {
 			camera.setIcon(new ImageIcon(bi));
 		}
 		add(camera);
-		
+
+
+		previewSides = new JLabel();
+		previewSides.setSize(new Dimension(1280,1280-720));
+		previewSides.setLocation(0, 720);
+
+
+		drawPreviewCubeSides();
+
+		add(previewSides);
 		
 		startScan = new JButton("Start scan!");
 		startScan.setSize(new Dimension(150, 30));
@@ -135,6 +161,7 @@ public class GUI extends JFrame implements Runnable {
 			scanningIndex = 0;
 			sideIndex = 0;
 			startScan.setEnabled(false);
+			hasSolution = false;
 		});
 		
 		add(startScan);
@@ -148,7 +175,9 @@ public class GUI extends JFrame implements Runnable {
 
 		add(nextSide);
 		
-		
+		test = new JTextField();
+
+		test.addFocusListener(new focusEvent(0,0, 255));
 		
 		
 		setVisible(true);
@@ -164,17 +193,14 @@ public class GUI extends JFrame implements Runnable {
 			if (now - lastDraw >= 1000/30) {
 				lastDraw = now;
 				//Draw
-				
-				if (scanning) System.out.println("Scanning: side " + sideIndex + ", frame " + scanningIndex);
-				
-				
+
 				if (usesCamera) {
 					if (cam.read(camFrame)) {
 						int[] arr = getColors(camFrame);
 						
 						if (scanning) {
 							if (scanningIndex == 0) {
-								scanCubes = new CubeSide[6][30*5];
+								scanCubes = new CubeSide[6][NUMBER_OF_FRAMES_TO_SCAN];
 							}
 							
 							scanCubes[sideIndex][scanningIndex] = new CubeSide(arr);
@@ -186,18 +212,30 @@ public class GUI extends JFrame implements Runnable {
 								for (int x = -1; x <= 1; x++) {
 									int index = (y + 1) * 3 + x + 1;
 									Rect rect = getRectFromCenter(getCenter(x, y));
-									if (arr[index] < 6) Imgproc.rectangle(camFrame, rect.tl(), rect.br(), targetColorsBGR[currentSideScan.colors[index].ordinal()], -1);
+									if (currentSideScan != null && currentSideScan.colors[index] != null) Imgproc.rectangle(camFrame, rect.tl(), rect.br(), targetColorsBGR[currentSideScan.colors[index].ordinal()], -1);
 								}
 							}
 
-							if (scanningIndex >= 30*5) {
+							if (scanningIndex >= NUMBER_OF_FRAMES_TO_SCAN) {
 								scanning = false; //Need the arduino to move the cube
+
+								previewCubeSides[sideIndex] = getAvgColorSide(scanCubes, sideIndex, scanningIndex);
+
 								scanningIndex = 0;
+
 								sideIndex++;
 
+
+
+
 								if (sideIndex >= 6) {
-									
-									//Cube scanning done!
+									nextSide.setEnabled(false); //TODO temp
+									startScan.setEnabled(true);
+									searching = true;
+									Solver.SolveCubeAsync(previewCubeSides, this);
+
+
+
 								}
 
 							}
@@ -217,8 +255,9 @@ public class GUI extends JFrame implements Runnable {
 						camera.setIcon(new ImageIcon(convertToBufferedImage(camFrame)));
 					}
 				}
-				
-				
+
+				drawPreviewCubeSides();
+
 				repaint();
 			}
 		}
@@ -252,92 +291,29 @@ public class GUI extends JFrame implements Runnable {
 
 		inRange(imgHSV, new Scalar(iLowH, iLowS, iLowV), new Scalar(iHighH, iHighS, iHighV), imgThreshold);
 
-
-		
-		//for (int i = 0; i < 6; i++) {
-		//cv::inRange(imgHSV, cv::Scalar(colorBonds[i][0][0], colorBonds[i][0][1], colorBonds[i][0][2]), cv::Scalar(colorBonds[i][1][0], colorBonds[i][1][1], colorBonds[i][1][2]), imgThreshold);
-		/*for (int y = -1; y <= 1; y++) {
-			for (int x = -1; x <= 1; x++) {
-				int index = (y + 1) * 3 + x + 1;
-				imshow(colorStrings[i], imgThreshold);
-				cv::Rect rect = getRectFromCenter(getCenter(x, y));
-				cv::Mat mask = imgThreshold(rect);
-				cv::Scalar avg = cv::mean(mask);
-				if (avg.val[0] > 20 && colors[index] == 255) {
-					colors[index] = i;
-				}
-
-			}
-		}*/
-
 		for (int y = -1; y <= 1; y++) {
 			for (int x = -1; x <= 1; x++) {
 				int index = (y + 1) * 3 + x + 1;
-
-				//imshow(colorStrings[i], imgThreshold);
 				Rect rect = getRectFromCenter(getCenter(x, y));
 				Scalar avghsv = Core.mean(new Mat(imgHSV, rect));
 				Scalar avgbgr = Core.mean(new Mat(image, rect));
 				arr[index] = getColor(avghsv, avgbgr);
-
-				//if (x == 0 && y == 0) std::cout << "H: " << avghsv.val[0] << "S: " << avghsv.val[1] << "V: " << avghsv.val[2] << "\n";
-
-
-				//std::cout << index << "\n";
 			}
 		}
 
-
-
-
-		//}
-	/*
-
-
-	for (int i = 0; i < 9; i++) {
-		if (colors[i] != 255) {
-			std::cout << "I:" << i << " color: " << colorStrings[colors[i]] << "\n";
-		}
-	}
-	*/
 		return arr;
 		
 	}
 	
 	private int getColor(Scalar hsv, Scalar bgr) {
-	/*
-	std::cout << round((float)bgr.val[0] / (float)bgr.val[1]) << "\n";
-	if (round((float)bgr.val[0] / (float)bgr.val[2]) > 2 && round((float)bgr.val[0] / (float)bgr.val[1]) >= 2) return 4; //BLUE
-	else if (round((float)bgr.val[1] / (float)bgr.val[2]) > 2) return 3; //GREEN
-
-	if (hsv.val[0] > 150) return 1; //RED
-	else if (hsv.val[0] < 20 && hsv.val[1] < 150) return 0; //WHITE
-	else if (hsv.val[0] < 20) return 2; //ORANGE
-	else if (hsv.val[0] < 50) return 5; //YELLOW
-
-
-	return 255;
-	*/
-/*
-	cv::Scalar rgb(bgr[2], bgr[1], bgr[0]);
-
-	for (int i = 0; i < 6; i++) {
-		if (hsv[0] > cColors[i][0][0] && hsv[0] < cColors[i][1][0] && hsv[1] > cColors[i][0][1] && hsv[1] < cColors[i][1][1] && hsv[2] > cColors[i][0][2] && hsv[2] < cColors[i][1][2]) return i;
-	}
-
-	*/
-
 
 		int index = 255;
 		int min_d = 0;
-
 
 		for (int i = 0; i < 6; i++) {
 			int d = (int) ((hsv.val[0] - targetColors[i].val[0]) * (hsv.val[0] - targetColors[i].val[0])) +
 					(int) ((hsv.val[1] - targetColors[i].val[1]) * (hsv.val[1] - targetColors[i].val[1])) +
 					(int) ((hsv.val[2] - targetColors[i].val[2]) * (hsv.val[2] - targetColors[i].val[2]));
-
-
 			if (d < min_d || index == 255) {
 				index = i;
 				min_d = d;
@@ -352,10 +328,10 @@ public class GUI extends JFrame implements Runnable {
 
 		int w = 0, r = 0, o = 0, g = 0, b = 0, y = 0;
 
-		for (int i = 0; i < 6; i++) {
+		for (int i = 0; i < 9; i++) {
 			w = 0; r = 0; o = 0; g = 0; b = 0; y = 0;
 
-			for (int j = 0; j < count; i++) {
+			for (int j = 0; j < count; j++) {
 				switch (sides[side][j].colors[i]) {
 					case WHITE:
 						w++;
@@ -410,6 +386,85 @@ public class GUI extends JFrame implements Runnable {
 		}
 
 		return color;
+
+	}
+
+	private void drawPreviewCubeSides() {
+		int startY = 92; int startX = 92;
+		int cubeWidthHeight = 120;
+		int smallCubeSize = 30;
+		int space = 50;
+
+		BufferedImage bufferedImage = new BufferedImage(previewSides.getWidth(), previewSides.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
+
+		Graphics2D g2d = bufferedImage.createGraphics();
+
+		g2d.setColor(Color.WHITE);
+		g2d.setFont(new Font("Aerial", Font.BOLD, 24));
+
+		if (searching) {
+			g2d.drawString("Solution: Searching!", startX, 20);
+		} else if (hasSolution) {
+			g2d.drawString("Solution: " + solution, startX, 20);
+		} else if (scanning) {
+			g2d.drawString("Scanning face: " + Solver.dectionOrder[sideIndex].getValue(), startX, 20);
+		}
+
+
+		for (int i = 0; i < 6; i++) {
+			int centerX = cubeWidthHeight / 2 + startX + (cubeWidthHeight + space) * i;
+			int centerY = cubeWidthHeight / 2 + startY;
+
+			g2d.setColor(Color.WHITE);
+
+			g2d.drawString(Solver.dectionOrder[i].getValue(), centerX + smallCubeSize / 4, (int)(centerY - smallCubeSize * 2));
+
+			for (int y = -1; y <= 1; y++) {
+				for (int x = -1; x <= 1; x++) {
+					int index = (y + 1) * 3 + x + 1;
+					g2d.setColor(new Color((int)targetColorsBGR[previewCubeSides[i].colors[index].ordinal()].val[2], (int)targetColorsBGR[previewCubeSides[i].colors[index].ordinal()].val[1],(int)targetColorsBGR[previewCubeSides[i].colors[index].ordinal()].val[0]));
+					g2d.fillRect((int)(centerX + (smallCubeSize * 1.5 + 6) * x), (int)(centerY + (smallCubeSize * 1.5 + 6) * y), smallCubeSize, smallCubeSize);
+				}
+			}
+
+
+
+		}
+
+		g2d.dispose();
+
+		previewSides.setIcon(new ImageIcon(bufferedImage));
+
+	}
+
+	public void setSolution(String solution) {
+		this.solution = solution;
+		hasSolution = true;
+	}
+
+	public void searchComplete() {
+		searching = false;
+	}
+}
+
+
+class focusEvent implements FocusListener {
+
+	int j, i, maxValue;
+
+	public focusEvent(int j, int i, int maxValue) {
+		this.j = j;
+		this.i = i;
+		this.maxValue = maxValue;
+	}
+
+	@Override
+	public void focusGained(FocusEvent e) {
+
+	}
+
+	@Override
+	public void focusLost(FocusEvent e) {
 
 	}
 }
