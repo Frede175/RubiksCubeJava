@@ -22,8 +22,7 @@ import static org.opencv.imgproc.Imgproc.cvtColor;
  * Created by fsr19 on 4/25/2017.
  */
 public class GUI extends JFrame implements Runnable {
-	
-	private Solver solver;
+
 	private Arduino arduino;
 	
 	
@@ -53,21 +52,23 @@ public class GUI extends JFrame implements Runnable {
 		new Scalar(180, 255, 255), //Red
 		new Scalar(15, 255, 255), //Orange
 		new Scalar(75, 255, 255), //Green
-		new Scalar(120, 255, 255), //Blue
+		new Scalar(145, 255, 255), //Blue
 		new Scalar(30, 255, 255) //Yellow
 	};
 	
 	
 	
 	
-	public GUI(Solver solver, Arduino arduino) {
-		this.solver = solver;
+	public GUI(Arduino arduino) {
 		this.arduino = arduino;
 		
 		setupFrame();
 		
 	}
-	
+
+	private boolean scanning = false;
+	private int scanningIndex = 0;
+	private CubeSide[][] scanCubes = new CubeSide[6][30*5]; //Scan for 5 sec
 	
 	private JLabel camera;
 	Mat camFrame = new Mat();
@@ -135,7 +136,8 @@ public class GUI extends JFrame implements Runnable {
 				if (usesCamera) {
 					if (cam.read(camFrame)) {
 						int[] arr = getColors(camFrame);
-						for (int y = -1; y <= 1; y++) {
+						for (int y = -1; y
+								<= 1; y++) {
 							for (int x = -1; x <= 1; x++) {
 								int index = (y + 1) * 3 + x + 1;
 								Rect rect = getRectFromCenter(getCenter(x, y));
@@ -273,5 +275,71 @@ public class GUI extends JFrame implements Runnable {
 		}
 
 		return index;
+	}
+
+	private CubeSide getAvgColorSide(CubeSide sides[][], int side, int count) {
+		CubeSide color = new CubeSide();
+
+		int w = 0, r = 0, o = 0, g = 0, b = 0, y = 0;
+
+		for (int i = 0; i < 6; i++) {
+			w = 0; r = 0; o = 0; g = 0; b = 0; y = 0;
+
+			for (int j = 0; j < count; i++) {
+				switch (sides[side][j].colors[i]) {
+					case WHITE:
+						w++;
+						break;
+					case RED:
+						r++;
+						break;
+					case ORANGE:
+						o++;
+						break;
+					case GREEN:
+						g++;
+						break;
+					case BLUE:
+						b++;
+						break;
+					case YELLOW:
+						y++;
+						break;
+				}
+			}
+
+			int maxColorCount = w;
+			Solver.Colors maxColor = Solver.Colors.WHITE;
+
+			if (r > maxColorCount) {
+				maxColor = Solver.Colors.RED;
+				maxColorCount = r;
+			}
+
+			if (o > maxColorCount) {
+				maxColor = Solver.Colors.ORANGE;
+				maxColorCount = o;
+			}
+
+			if (g > maxColorCount) {
+				maxColor = Solver.Colors.GREEN;
+				maxColorCount = g;
+			}
+
+			if (b > maxColorCount) {
+				maxColor = Solver.Colors.BLUE;
+				maxColorCount = b;
+			}
+
+			if (y > maxColorCount) {
+				maxColor = Solver.Colors.YELLOW;
+				maxColorCount = y;
+			}
+
+			color.colors[i] = maxColor;
+		}
+
+		return color;
+
 	}
 }

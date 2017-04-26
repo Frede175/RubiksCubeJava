@@ -10,13 +10,11 @@ import org.opencv.core.Mat;
 public class Main {
 
 	private GUI gui;
-	private Solver solver;
 	private Arduino arduino;
 	
 	private Main() {
-		solver = new Solver();
 		arduino = new Arduino();
-		gui = new GUI(solver, arduino);
+		gui = new GUI(arduino);
 		
 		System.out.println();
 		
