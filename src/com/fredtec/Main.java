@@ -1,11 +1,16 @@
 package com.fredtec;
 
+import gnu.io.PortInUseException;
+import gnu.io.UnsupportedCommOperationException;
 import org.kociemba.twophase.Facelet;
 import org.kociemba.twophase.Search;
 import org.kociemba.twophase.Tools;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+
+import java.io.IOException;
+import java.util.TooManyListenersException;
 
 public class Main {
 
@@ -15,11 +20,19 @@ public class Main {
 	private Main() {
 		arduino = new Arduino();
 		gui = new GUI(arduino);
+		arduino.setGUI(gui);
+		new Thread(gui).start();
+		try {
+			arduino.connect();
+		} catch (PortInUseException | UnsupportedCommOperationException | IOException | TooManyListenersException e) {
+			e.printStackTrace();
+		}
+		
 		
 		System.out.println();
 		
 		
-		new Thread(gui).start();
+		
 	}
 	
 	

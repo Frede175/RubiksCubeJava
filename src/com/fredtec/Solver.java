@@ -29,6 +29,8 @@ public class Solver {
 	public static Sides sideOrder[] = {Sides.U, Sides.R, Sides.F, Sides.D, Sides.L, Sides.B};
 	public static Sides dectionOrder[] = { Sides.U, Sides.F, Sides.D, Sides.L, Sides.B, Sides.R};
 	
+	public static String moves[] = { "F", "F2", "F'", "B", "B2", "B'", "L", "L2", "L'", "R", "R2", "R'", "U", "U2", "U'", "D", "D2", "D'" };
+	
 	public enum Sides {
 	 	
 	 	U("U"), R("R"), F("F"), D("D"), L("L"), B("B");
