@@ -28,18 +28,7 @@ public class GUI extends JFrame implements Runnable {
 
 	private Arduino arduino;
 	
-	
-	private int scale = 7;
-
-	private int iLowH = 0;
-	private int iHighH = 179;
-
-	private int iLowS = 0;
-	private int iHighS = 255;
-
-	private int iLowV = 0;
-	private int iHighV = 255;
-	
+	private final static int scale = 7;
 	
 	private static Scalar targetColorsBGR[] = {
 		new Scalar(255,255,255), //White
@@ -60,14 +49,6 @@ public class GUI extends JFrame implements Runnable {
 	};
 
 	private static int NUMBER_OF_FRAMES_TO_SCAN = 30*2;
-	
-	
-	
-	public GUI(Arduino arduino) {
-		this.arduino = arduino;
-		setupFrame();
-		
-	}
 
 	private boolean scanning = false;
 	private int scanningIndex = 0;
@@ -84,7 +65,6 @@ public class GUI extends JFrame implements Runnable {
 	private JButton connect;
 	
 	private JLabel connectStatus;
-
 	
 	private final static int MAX_VALUE_HUE = 180;
 	private final static int MAX_VALUE_SAT = 255;
@@ -106,7 +86,6 @@ public class GUI extends JFrame implements Runnable {
 	private JLabel redPreview;
 	private JLabel orangePreview;
 	private JLabel yellowPreview;
-	
 
 	private JLabel previewSides;
 	private CubeSide[] previewCubeSides = {
@@ -117,7 +96,6 @@ public class GUI extends JFrame implements Runnable {
 			new CubeSide(new int[] {5,5,5,5,5,5,5,5,5}), //B: Yellow
 			new CubeSide(new int[] {1,1,1,1,1,1,1,1,1})  //R: Red
 	};
-
 	
 	private JLabel camera;
 	Mat camFrame = new Mat();
@@ -125,16 +103,21 @@ public class GUI extends JFrame implements Runnable {
 	private boolean usesCamera = false;
 	private int camWidth = 1280, camHeight = 1024;
 	
-	
-	
 	private boolean scanMove = false;
 	private boolean moveMove = false;
 	
 	private boolean waitingOnDone = false;
 	private int solutionIndex = 0;
 	
+	
+	public GUI(Arduino arduino) {
+		this.arduino = arduino;
+		setupFrame();
+
+	}
+		
 	private void setupFrame() {
-		setName("Rubiks cube software");
+		setTitle("Rubiks cube software");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setLayout(null);
 		setSize(new Dimension(1580,1024));
@@ -146,8 +129,6 @@ public class GUI extends JFrame implements Runnable {
 		
 		if (cam.isOpened()) {
 			usesCamera = true;
-				//Need to calculate
-
 			cam.set(Videoio.CV_CAP_PROP_FRAME_WIDTH,1280);
 			cam.set(Videoio.CAP_PROP_FRAME_HEIGHT, 720);
 			camWidth = (int)cam.get(Videoio.CV_CAP_PROP_FRAME_WIDTH);
@@ -176,11 +157,9 @@ public class GUI extends JFrame implements Runnable {
 		}
 		add(camera);
 
-
 		previewSides = new JLabel();
 		previewSides.setSize(new Dimension(1280,1280-720));
 		previewSides.setLocation(0, 720);
-
 
 		drawPreviewCubeSides();
 
@@ -205,7 +184,7 @@ public class GUI extends JFrame implements Runnable {
 		STOP.setSize(new Dimension(120, 30));
 		STOP.setLocation(1300, 60);
 		STOP.addActionListener(e ->  {
-			scanning = false;
+			arduino.sendStop();
 		});
 
 		add(STOP);
@@ -214,7 +193,7 @@ public class GUI extends JFrame implements Runnable {
 		RESUME.setSize(new Dimension(120, 30));
 		RESUME.setLocation(1430, 60);
 		RESUME.addActionListener(e ->  {
-			scanning = false;
+			arduino.sendResume();
 		});
 
 		add(RESUME);
@@ -277,7 +256,7 @@ public class GUI extends JFrame implements Runnable {
 		whiteV.setPaintLabels(true);
 		whiteV.setValue((int)targetColors[0].val[2]);
 		whiteV.addChangeListener(e -> {
-			targetColors[0].val[2] = whiteS.getValue();
+			targetColors[0].val[2] = whiteV.getValue();
 			whitePreview.setBackground(Color.getHSBColor((float)targetColors[0].val[0] / 180, (float)targetColors[0].val[1] / 255, (float)targetColors[0].val[2] / 255));
 		});
 
@@ -591,20 +570,15 @@ public class GUI extends JFrame implements Runnable {
 		int arr[] = new int[9];
 		
 		Mat imgHSV = new Mat();
-
+		
 		Imgproc.cvtColor(image, imgHSV, Imgproc.COLOR_BGR2HSV_FULL);
-
-		Mat imgThreshold = new Mat();
-
-		inRange(imgHSV, new Scalar(iLowH, iLowS, iLowV), new Scalar(iHighH, iHighS, iHighV), imgThreshold);
-
+		
 		for (int y = -1; y <= 1; y++) {
 			for (int x = -1; x <= 1; x++) {
 				int index = (y + 1) * 3 + x + 1;
 				Rect rect = getRectFromCenter(getCenter(x, y));
 				Scalar avghsv = Core.mean(new Mat(imgHSV, rect));
-				Scalar avgbgr = Core.mean(new Mat(image, rect));
-				arr[index] = getColor(avghsv, avgbgr);
+				arr[index] = getColor(avghsv);
 			}
 		}
 
@@ -612,7 +586,7 @@ public class GUI extends JFrame implements Runnable {
 		
 	}
 	
-	private int getColor(Scalar hsv, Scalar bgr) {
+	private int getColor(Scalar hsv) {
 
 		int index = 255;
 		int min_d = 0;

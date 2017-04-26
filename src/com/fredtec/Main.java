@@ -27,12 +27,6 @@ public class Main {
 		} catch (PortInUseException | UnsupportedCommOperationException | IOException | TooManyListenersException e) {
 			e.printStackTrace();
 		}
-		
-		
-		System.out.println();
-		
-		
-		
 	}
 	
 	
