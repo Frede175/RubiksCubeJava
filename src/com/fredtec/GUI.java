@@ -68,7 +68,14 @@ public class GUI extends JFrame implements Runnable {
 
 	private boolean scanning = false;
 	private int scanningIndex = 0;
+	private int sideIndex = 0;
 	private CubeSide[][] scanCubes = new CubeSide[6][30*5]; //Scan for 5 sec
+	
+	
+	private JButton startScan;
+	private JButton nextSide;
+	private JButton stopScan;
+	
 	
 	private JLabel camera;
 	Mat camFrame = new Mat();
@@ -98,7 +105,7 @@ public class GUI extends JFrame implements Runnable {
 		}
 		
 		camera = new JLabel();
-		camera.setSize(new Dimension(1580,1024));
+		camera.setSize(new Dimension(1280,1024));
 		
 		if (usesCamera) {
 			cam.read(camFrame);
@@ -120,6 +127,30 @@ public class GUI extends JFrame implements Runnable {
 		add(camera);
 		
 		
+		startScan = new JButton("Start scan!");
+		startScan.setSize(new Dimension(150, 30));
+		startScan.setLocation(1300, 30);
+		startScan.addActionListener(e ->  {
+			scanning = true;
+			scanningIndex = 0;
+			sideIndex = 0;
+			startScan.setEnabled(false);
+		});
+		
+		add(startScan);
+
+		nextSide = new JButton("Next side!");
+		nextSide.setSize(new Dimension(150, 30));
+		nextSide.setLocation(1300, 75);
+		nextSide.addActionListener(e ->  {
+			scanning = true;
+		});
+
+		add(nextSide);
+		
+		
+		
+		
 		setVisible(true);
 	}
 	
@@ -133,17 +164,56 @@ public class GUI extends JFrame implements Runnable {
 			if (now - lastDraw >= 1000/30) {
 				lastDraw = now;
 				//Draw
+				
+				if (scanning) System.out.println("Scanning: side " + sideIndex + ", frame " + scanningIndex);
+				
+				
 				if (usesCamera) {
 					if (cam.read(camFrame)) {
 						int[] arr = getColors(camFrame);
-						for (int y = -1; y
-								<= 1; y++) {
-							for (int x = -1; x <= 1; x++) {
-								int index = (y + 1) * 3 + x + 1;
-								Rect rect = getRectFromCenter(getCenter(x, y));
-								if (arr[index] < 6) Imgproc.rectangle(camFrame, rect.tl(), rect.br(), targetColorsBGR[arr[index]], -1);
+						
+						if (scanning) {
+							if (scanningIndex == 0) {
+								scanCubes = new CubeSide[6][30*5];
+							}
+							
+							scanCubes[sideIndex][scanningIndex] = new CubeSide(arr);
+							scanningIndex++;
+							
+							
+							CubeSide currentSideScan = getAvgColorSide(scanCubes, sideIndex, scanningIndex);
+							for (int y = -1; y <= 1; y++) {
+								for (int x = -1; x <= 1; x++) {
+									int index = (y + 1) * 3 + x + 1;
+									Rect rect = getRectFromCenter(getCenter(x, y));
+									if (arr[index] < 6) Imgproc.rectangle(camFrame, rect.tl(), rect.br(), targetColorsBGR[currentSideScan.colors[index].ordinal()], -1);
+								}
+							}
+
+							if (scanningIndex >= 30*5) {
+								scanning = false; //Need the arduino to move the cube
+								scanningIndex = 0;
+								sideIndex++;
+
+								if (sideIndex >= 6) {
+									
+									//Cube scanning done!
+								}
+
+							}
+							
+							
+						} else {
+							for (int y = -1; y <= 1; y++) {
+								for (int x = -1; x <= 1; x++) {
+									int index = (y + 1) * 3 + x + 1;
+									Rect rect = getRectFromCenter(getCenter(x, y));
+									if (arr[index] < 6) Imgproc.rectangle(camFrame, rect.tl(), rect.br(), targetColorsBGR[arr[index]], -1);
+								}
 							}
 						}
+						
+						
 						camera.setIcon(new ImageIcon(convertToBufferedImage(camFrame)));
 					}
 				}
