@@ -698,8 +698,10 @@ public class GUI extends JFrame implements Runnable {
 			g2d.drawString("Solution: Searching!", startX, 20);
 		} else if (hasSolution) {
 			g2d.drawString("Solution: " + solution, startX, 20);
-		} else if (scanning) {
+		} else if (scanning && !waitingOnDone) {
 			g2d.drawString("Scanning face: " + Solver.dectionOrder[sideIndex].getValue(), startX, 20);
+		} else if (waitingOnDone) {
+			g2d.drawString("Waiting on ardiuno to rotate/turing cube", startX, 20);
 		}
 
 
