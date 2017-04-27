@@ -22,11 +22,6 @@ public class Main {
 		gui = new GUI(arduino);
 		arduino.setGUI(gui);
 		new Thread(gui).start();
-		try {
-			arduino.connect();
-		} catch (PortInUseException | UnsupportedCommOperationException | IOException | TooManyListenersException e) {
-			e.printStackTrace();
-		}
 	}
 	
 	

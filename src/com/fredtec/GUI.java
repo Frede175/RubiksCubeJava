@@ -7,6 +7,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.video.Video;
 import org.opencv.videoio.VideoCapture;
 import org.opencv.videoio.Videoio;
 
@@ -133,6 +134,15 @@ public class GUI extends JFrame implements Runnable {
 			cam.set(Videoio.CAP_PROP_FRAME_HEIGHT, 720);
 			camWidth = (int)cam.get(Videoio.CV_CAP_PROP_FRAME_WIDTH);
 			camHeight = (int)cam.get(Videoio.CV_CAP_PROP_FRAME_HEIGHT);
+			//cam.set(Videoio.CAP_PROP_CONTRAST, 7000);
+			//camera.set(cv::CAP_PROP_ISO_SPEED, 255);
+			//cam.set(Videoio.CAP_PROP_SATURATION, 7400);
+			//cam.set(15, -8.0);
+
+
+			cam.set(Videoio.CAP_PROP_SETTINGS, 0);
+
+
 		}
 		
 		camera = new JLabel();
@@ -417,6 +427,7 @@ public class GUI extends JFrame implements Runnable {
 		connect.addActionListener(new AbstractAction() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				System.out.println("Coonecting!");
 				if (arduino.isConnected()) return;
 				try {
 					arduino.connect();
