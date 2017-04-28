@@ -14,11 +14,14 @@ import org.opencv.videoio.Videoio;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.IOException;
 import java.util.TooManyListenersException;
 
+import static org.opencv.core.Core.findNonZero;
 import static org.opencv.core.Core.inRange;
 import static org.opencv.imgproc.Imgproc.cvtColor;
 
@@ -64,6 +67,7 @@ public class GUI extends JFrame implements Runnable {
 	private JButton STOP;
 	private JButton RESUME;
 	private JButton connect;
+	private JButton openCam;
 	
 	private JLabel connectStatus;
 	
@@ -107,6 +111,8 @@ public class GUI extends JFrame implements Runnable {
 	private boolean scanMove = false;
 	private boolean moveMove = false;
 	
+	private boolean finishedSolution = false;
+	
 	private boolean waitingOnDone = false;
 	private int solutionIndex = 0;
 	
@@ -118,6 +124,22 @@ public class GUI extends JFrame implements Runnable {
 	}
 		
 	private void setupFrame() {
+		
+		addWindowListener(new WindowAdapter() {
+			public void windowClosing(WindowEvent e) {
+				if (arduino.isConnected()) {
+					arduino.disconnect();
+				}
+				if (usesCamera) {
+					cam.release();
+				}
+			}
+		});
+		
+		
+		
+		
+		
 		setTitle("Rubiks cube software");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setLayout(null);
@@ -176,7 +198,7 @@ public class GUI extends JFrame implements Runnable {
 		add(previewSides);
 		
 		startScan = new JButton("Start scan!");
-		startScan.setSize(new Dimension(150, 30));
+		startScan.setSize(new Dimension(120, 30));
 		startScan.setLocation(1300, 15);
 		startScan.addActionListener(e ->  {
 			scanning = true;
@@ -189,6 +211,39 @@ public class GUI extends JFrame implements Runnable {
 		startScan.setEnabled(false);
 		
 		add(startScan);
+
+		openCam = new JButton("Open cam");
+		openCam.setSize(new Dimension(120, 30));
+		openCam.setLocation(1430, 15);
+		openCam.addActionListener(e ->  {
+			String index = JOptionPane.showInputDialog(this, "Index of camera? (number)", "0");
+			try {
+				int c = Integer.parseInt(index);
+				cam.release();
+				usesCamera = false;
+				cam.open(c);
+
+				if (cam.isOpened()) {
+					usesCamera = true;
+					cam.set(Videoio.CV_CAP_PROP_FRAME_WIDTH,1280);
+					cam.set(Videoio.CAP_PROP_FRAME_HEIGHT, 720);
+					camWidth = (int)cam.get(Videoio.CV_CAP_PROP_FRAME_WIDTH);
+					camHeight = (int)cam.get(Videoio.CV_CAP_PROP_FRAME_HEIGHT);
+					//cam.set(Videoio.CAP_PROP_CONTRAST, 7000);
+					//camera.set(cv::CAP_PROP_ISO_SPEED, 255);
+					//cam.set(Videoio.CAP_PROP_SATURATION, 7400);
+					//cam.set(15, -8.0);
+					cam.set(Videoio.CAP_PROP_SETTINGS, 0);
+				}
+			} catch (NumberFormatException error) {
+				JOptionPane.showMessageDialog(this, "Not a number!", "Error", JOptionPane.ERROR_MESSAGE);
+			}
+			
+		});
+
+		add(openCam);
+		
+		
 
 		STOP = new JButton("STOP");
 		STOP.setSize(new Dimension(120, 30));
@@ -440,6 +495,7 @@ public class GUI extends JFrame implements Runnable {
 				}
 				else {
 					connectStatus.setText("Connected!");
+					connect.setEnabled(false);
 					startScan.setEnabled(true);
 				}
 			}
@@ -472,6 +528,8 @@ public class GUI extends JFrame implements Runnable {
 						int[] arr = getColors(camFrame);
 						
 						if (scanning && !waitingOnDone && !scanMove) {
+							arduino.sendGrab();
+							waitingOnDone = true;
 							if (scanningIndex == 0) {
 								scanCubes = new CubeSide[6][NUMBER_OF_FRAMES_TO_SCAN];
 							}
@@ -500,7 +558,7 @@ public class GUI extends JFrame implements Runnable {
 
 								if (sideIndex >= 6) {
 									startScan.setEnabled(true);
-									searching = true;
+									searching = false;
 									Solver.SolveCubeAsync(previewCubeSides, this);
 								} else {
 									scanMove = true;
@@ -532,7 +590,7 @@ public class GUI extends JFrame implements Runnable {
 					arduino.sendScan(sideIndex);
 				}
 				
-				if (hasSolution && !waitingOnDone) {
+				if (hasSolution && !waitingOnDone && !finishedSolution) {
 					String array[] = solution.split(" ");
 					if (solutionIndex < array.length) {
 						int move;
@@ -545,6 +603,10 @@ public class GUI extends JFrame implements Runnable {
 							hasSolution = false;
 						}
 						
+					} else {
+						finishedSolution = true;
+						arduino.sendRelease();
+						waitingOnDone = true;
 					}
 				}
 
@@ -696,12 +758,14 @@ public class GUI extends JFrame implements Runnable {
 
 		if (searching) {
 			g2d.drawString("Solution: Searching!", startX, 20);
-		} else if (hasSolution) {
+		} else if (hasSolution && !finishedSolution) {
 			g2d.drawString("Solution: " + solution, startX, 20);
 		} else if (scanning && !waitingOnDone) {
 			g2d.drawString("Scanning face: " + Solver.dectionOrder[sideIndex].getValue(), startX, 20);
 		} else if (waitingOnDone) {
 			g2d.drawString("Waiting on ardiuno to rotate/turing cube", startX, 20);
+		} else if (finishedSolution) {
+			g2d.drawString("Solution: " + solution + ". Cube is solved!", startX, 20);
 		}
 
 

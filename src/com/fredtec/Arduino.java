@@ -24,9 +24,7 @@ public class Arduino {
 		this.gui = gui;
 		hasGUI = true;
 	}
-	
-	
-	
+		
 	//This class is for the com between the arduino and this program.
 	public static int OUTPUT = 1;
 	public static int INPUT = 0;
@@ -101,19 +99,19 @@ public class Arduino {
 	}
 	
 	public void sendStop() {
-		sendData("STOP\n");
+		if (isConnected()) sendData("STOP\n");
 	}
 	
 	public void sendResume() {
-		sendData("RESUME\n");
+		if (isConnected()) sendData("RESUME\n");
 	}
 	
 	public void sendScan(int index) {
-		sendData("s" + index +"\n");
+		if (isConnected()) sendData("s" + index +"\n");
 	}
 	
 	public void sendMove(int move) {
-		sendData("m" + move + "\n");
+		if (isConnected()) sendData("m" + move + "\n");
 	}
 
 	private void sendData(String data) {
@@ -122,5 +120,13 @@ public class Arduino {
 		} catch (IOException e) {
 			System.err.println("Error in write");
 		}
+	}
+
+	public void sendGrab() {
+		if (isConnected()) sendData("G");
+	}
+	
+	public void sendRelease() {
+		if (isConnected()) sendData("R");
 	}
 }
