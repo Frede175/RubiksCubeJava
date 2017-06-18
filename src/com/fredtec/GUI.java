@@ -32,7 +32,8 @@ public class GUI extends JFrame implements Runnable {
 
 	private Arduino arduino;
 	
-	private final static int scale = 7;
+	private static int scale = 7;
+	private static int offsetX = 0, offsetY = 0;
 	
 	private static Scalar targetColorsBGR[] = {
 		new Scalar(255,255,255), //White
@@ -68,6 +69,8 @@ public class GUI extends JFrame implements Runnable {
 	private JButton RESUME;
 	private JButton connect;
 	private JButton openCam;
+
+	private JButton offsets;
 	
 	private JLabel connectStatus;
 	
@@ -500,13 +503,47 @@ public class GUI extends JFrame implements Runnable {
 				}
 			}
 		});
-		connect.setVisible(true);
 		add(connect);
 
 		connectStatus = new JLabel("Disconnected");
 		connectStatus.setBounds(1300, 135, 150, 25);
 		connectStatus.setVisible(true);
 		add(connectStatus);
+
+		offsets = new JButton("Region offset");
+		offsets.setBounds(1300, 950, 150, 30);
+		offsets.addActionListener(e ->   {
+				JTextField scale = new JTextField(GUI.scale + "");
+				JTextField offsetX = new JTextField(GUI.offsetX + "");
+				JTextField offsetY = new JTextField(GUI.offsetY + "");
+
+				Object[] message = {
+						"Scale: ", scale,
+						"Offset X:", offsetX,
+						"Offset Y", offsetY
+				};
+
+				int option = JOptionPane.showConfirmDialog(this, message, "Offsets", JOptionPane.OK_CANCEL_OPTION);
+				if (option == JOptionPane.OK_OPTION) {
+					try {
+						int scaleI = Integer.parseInt(scale.getText());
+						int offsetXI = Integer.parseInt(offsetX.getText());
+						int offsetYI = Integer.parseInt(offsetY.getText());
+
+						if (scaleI <= 0) scaleI = 1;
+						if (scaleI > 15) scaleI = 20;
+
+						GUI.scale = scaleI;
+						GUI.offsetX = offsetXI;
+						GUI.offsetY = offsetYI;
+					} catch (NumberFormatException error) {
+						JOptionPane.showMessageDialog(this, "Not a number!", "Error", JOptionPane.ERROR_MESSAGE);
+					}
+				}
+		});
+
+
+		add(offsets);
 		
 		
 		setVisible(true);
@@ -631,7 +668,7 @@ public class GUI extends JFrame implements Runnable {
 
 
 	private Point getCenter(int x, int y) {
-		return new Point(camWidth / 2 + x * 19 * scale, camHeight / 2 + y * 19 * scale);
+		return new Point(camWidth / 2 + offsetX + x * 19 * scale, camHeight / 2 + offsetY + y * 19 * scale);
 	}
 
 	Rect getRectFromCenter(Point center) {
