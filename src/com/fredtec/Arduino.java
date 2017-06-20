@@ -107,11 +107,11 @@ public class Arduino {
 	}
 	
 	public void sendScan(int index) {
-		if (isConnected()) sendData("s" + index +"\n");
+		if (isConnected()) sendData("S" + index +"\n");
 	}
 	
 	public void sendMove(int move) {
-		if (isConnected()) sendData("m" + move + "\n");
+		if (isConnected()) sendData("M" + move + "\n");
 	}
 
 	private void sendData(String data) {

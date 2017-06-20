@@ -204,12 +204,18 @@ public class GUI extends JFrame implements Runnable {
 		startScan.setSize(new Dimension(120, 30));
 		startScan.setLocation(1300, 15);
 		startScan.addActionListener(e ->  {
+			/*
 			scanning = true;
 			scanningIndex = 0;
 			sideIndex = 0;
 			startScan.setEnabled(false);
 			hasSolution = false;
 			scanMove = true;
+			*/
+			
+			arduino.sendMove(0);
+			
+			
 		});
 		startScan.setEnabled(false);
 		
